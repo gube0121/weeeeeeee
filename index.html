@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>1학년 1반 학급 게시판</title>
+  <style>
+    body { font-family: sans-serif; background: #f8f9fa; margin: 0; padding: 0; }
+    header { background: #4a90e2; color: white; padding: 1.5rem; text-align: center; }
+    section { max-width: 900px; margin: 2rem auto; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 0 10px #ccc; }
+    h2 { border-bottom: 2px solid #ddd; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+    .editable { padding: 0.5rem; background: #f0f0f0; border-radius: 4px; cursor: text; min-height: 50px; }
+    .admin-controls { text-align: center; margin: 1rem 0; }
+    button { padding: 0.5rem 1rem; margin: 0.3rem; font-weight: bold; border: none; border-radius: 5px; background: #4a90e2; color: white; cursor: pointer; }
+    button#resetBtn { background: #e74c3c; }
+    #loginModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; }
+    #loginBox { background: white; padding: 2rem; border-radius: 8px; text-align: center; width: 300px; }
+    #loginBox input { padding: 0.5rem; width: 80%; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #bbb; padding: 8px; text-align: center; min-width: 80px; }
+    th { background: #e0e7ff; }
+    #photos img { max-width: 150px; margin: 5px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+
+<header>1학년 1반 학급 게시판</header>
+
+<div class="admin-controls">
+  <button onclick="showLogin()">🔐 관리자 로그인</button>
+  <button onclick="toggleEdit()" id="editBtn" style="display:none">✏️ 수정 모드</button>
+  <button onclick="saveContent()" id="saveBtn" style="display:none">💾 저장</button>
+  <button onclick="resetContent()" id="resetBtn" style="display:none">🗑️ 초기화</button>
+</div>
+
+<section>
+  <h2>📢 공지사항</h2>
+  <div id="notice" class="editable" contenteditable="false">여기에 공지 내용을 입력하세요.</div>
+</section>
+
+<section>
+  <h2>📝 수행평가</h2>
+  <div id="assignments" class="editable" contenteditable="false">수행평가 일정과 내용을 입력하세요.</div>
+</section>
+
+<section>
+  <h2>📅 학급 시간표</h2>
+  <table id="timetable">
+    <thead>
+      <tr>
+        <th>교시</th>
+        <th>월</th>
+        <th>화</th>
+        <th>수</th>
+        <th>목</th>
+        <th>금</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><th>1교시</th><td>국어</td><td>수학</td><td>영어</td><td>사회</td><td>과학</td></tr>
+      <tr><th>2교시</th><td>수학</td><td>영어</td><td>국어</td><td>체육</td><td>음악</td></tr>
+      <tr><th>3교시</th><td>과학</td><td>사회</td><td>체육</td><td>국어</td><td>수학</td></tr>
+      <tr><th>4교시</th><td>영어</td><td>국어</td><td>미술</td><td>영어</td><td>사회</td></tr>
+      <tr><th>5교시</th><td>체육</td><td>과학</td><td>음악</td><td>수학</td><td>자율</td></tr>
+      <tr><th>6교시</th><td>미술</td><td>자율</td><td>수학</td><td>과학</td><td>동아리</td></tr>
+      <tr><th>7교시</th><td>진로</td><td>창체</td><td>독서</td><td>음악</td><td>과학</td></tr>
+      <tr><th>8교시</th><td>영어</td><td>국어</td><td>수학</td><td>미술</td><td>자율</td></tr>
+      <tr><th>9교시</th><td>방과후</td><td>방과후</td><td>방과후</td><td>방과후</td><td>방과후</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>🍽 오늘의 급식</h2>
+  <div id="lunch" class="editable" contenteditable="false">오늘의 급식을 입력하세요.</div>
+</section>
+
+<section>
+  <h2>📷 사진 첨부</h2>
+  <div id="photos" class="editable" contenteditable="false">
+    <p>사진을 여기 붙여넣거나 입력하세요.</p>
+  </div>
+</section>
+
+<div id="loginModal">
+  <div id="loginBox">
+    <h3>관리자 로그인</h3>
+    <input type="password" id="passwordInput" placeholder="비밀번호 입력" />
+    <br />
+    <button onclick="checkPassword()">로그인</button>
+  </div>
+</div>
+
+<script>
+  const adminPassword = '1234';
+
+  const defaultData = {
+    notice: '여기에 공지 내용을 입력하세요.',
+    assignments: '수행평가 일정과 내용을 입력하세요.',
+    timetable: `
+      <table id="timetable">
+        <thead>
+          <tr>
+            <th>교시</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th>1교시</th><td>국어</td><td>수학</td><td>영어</td><td>사회</td><td>과학</td></tr>
+          <tr><th>2교시</th><td>수학</td><td>영어</td><td>국어</td><td>체육</td><td>음악</td></tr>
+          <tr><th>3교시</th><td>과학</td><td>사회</td><td>체육</td><td>국어</td><td>수학</td></tr>
+          <tr><th>4교시</th><td>영어</td><td>국어</td><td>미술</td><td>영어</td><td>사회</td></tr>
+          <tr><th>5교시</th><td>체육</td><td>과학</td><td>음악</td><td>수학</td><td>자율</td></tr>
+          <tr><th>6교시</th><td>미술</td><td>자율</td><td>수학</td><td>과학</td><td>동아리</td></tr>
+          <tr><th>7교시</th><td>진로</td><td>창체</td><td>독서</td><td>음악</td><td>과학</td></tr>
+          <tr><th>8교시</th><td>영어</td><td>국어</td><td>수학</td><td>미술</td><td>자율</td></tr>
+          <tr><th>9교시</th><td>방과후</td><td>방과후</td><td>방과후</td><td>방과후</td><td>방과후</td></tr>
+        </tbody>
+      </table>
+    `,
+    lunch: '오늘의 급식을 입력하세요.',
+    photos: '<p>사진을 여기 붙여넣거나 입력하세요.</p>'
+  };
+
+  function showLogin() {
+    document.getElementById('loginModal').style.display = 'flex';
+  }
+
+  function checkPassword() {
+    const input = document.getElementById('passwordInput').value;
+    if (input === adminPassword) {
+      alert('관리자 인증 성공!');
+      document.getElementById('loginModal').style.display = 'none';
+      document.getElementById('editBtn').style.display = 'inline-block';
+      document.getElementById('saveBtn').style.display = 'inline-block';
+      document.getElementById('resetBtn').style.display = 'inline-block';
+    } else {
+      alert('비밀번호가 틀렸습니다.');
+    }
+  }
+
+  let isEditMode = false;
+
+  function toggleEdit() {
+    isEditMode = !isEditMode;
+    const editableElements = document.querySelectorAll('.editable');
+    const timetableTable = document.getElementById('timetable');
+
+    if (isEditMode) {
+      editableElements.forEach(el => el.contentEditable = 'true');
+      enableTableEditing(timetableTable, true);
+      document.getElementById('editBtn').textContent = '❌ 수정 종료';
+    } else {
+      editableElements.forEach(el => el.contentEditable = 'false');
+      enableTableEditing(timetableTable, false);
+      document.getElementById('editBtn').textContent = '✏️ 수정 모드';
+    }
+  }
+
+  function enableTableEditing(table, enable) {
+    if (!table) return;
+    const cells = table.querySelectorAll('tbody td');
+    cells.forEach(cell => {
+      cell.contentEditable = enable ? 'true' : 'false';
+      if (enable) {
+        cell.style.backgroundColor = '#f0f0f0';
+        cell.style.cursor = 'text';
+      } else {
+        cell.style.backgroundColor = '';
+        cell.style.cursor = '';
+      }
+    });
+  }
+
+  function saveContent() {
+    if (!isEditMode) {
+      alert('수정 모드가 아닙니다.');
+      return;
+    }
+    localStorage.setItem('notice', document.getElementById('notice').innerHTML);
+    localStorage.setItem('assignments', document.getElementById('assignments').innerHTML);
+    localStorage.setItem('timetable', document.getElementById('timetable').outerHTML);
+    localStorage.setItem('lunch', document.getElementById('lunch').innerHTML);
+    localStorage.setItem('photos', document.getElementById('photos').innerHTML);
+
+    alert('저장되었습니다.');
+    toggleEdit();
+  }
+
+  function resetContent() {
+    if (!confirm('정말로 모든 내용을 초기화하시겠습니까? 저장된 데이터가 모두 삭제됩니다.')) return;
+
+    localStorage.removeItem('notice');
+    localStorage.removeItem('assignments');
+    localStorage.removeItem('timetable');
+    localStorage.removeItem('lunch');
+    localStorage.removeItem('photos');
+
+    loadContent(defaultData);
+    alert('모든 내용이 초기화되었습니다.');
+  }
+
+  function loadContent(data) {
+    document.getElementById('notice').innerHTML = data.notice;
+    document.getElementById('assignments').innerHTML = data.assignments;
+    // 시간표는 table 요소 전체를 교체
+    const timetableContainer = document.getElementById('timetable').parentNode;
+    timetableContainer.innerHTML = data.timetable;
+    document.getElementById('lunch').innerHTML = data.lunch;
+    document.getElementById('photos').innerHTML = data.photos;
+  }
+
+  function loadSavedContent() {
+    const notice = localStorage.getItem('notice');
+    const assignments = localStorage.getItem('assignments');
+    const timetable = localStorage.getItem('timetable');
+    const lunch = localStorage.getItem('lunch');
+    const photos = localStorage.getItem('photos');
+
+    loadContent({
+      notice: notice || defaultData.notice,
+      assignments: assignments || defaultData.assignments,
+      timetable: timetable || defaultData.timetable,
+      lunch: lunch || defaultData.lunch,
+      photos: photos || defaultData.photos
+    });
+  }
+
+  window.onload = loadSavedContent;
+</script>
+
+</body>
+</html>
+
